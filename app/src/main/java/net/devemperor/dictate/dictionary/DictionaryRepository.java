@@ -37,6 +37,7 @@ public class DictionaryRepository {
     /**
      * Apply dictionary replacements to the given text.
      * Matches are case-insensitive and whole-word.
+     * Patterns are compiled once per call for performance.
      *
      * @param text          text to process
      * @param professionTag current profession tag, or null for general
@@ -54,12 +55,20 @@ public class DictionaryRepository {
 
         if (words == null || words.isEmpty()) return text;
 
+        // Pre-compile all patterns before processing
+        Pattern[] patterns = new Pattern[words.size()];
+        for (int i = 0; i < words.size(); i++) {
+            String trigger = words.get(i).triggerWord;
+            if (trigger != null && !trigger.isEmpty()) {
+                patterns[i] = Pattern.compile("(?i)\\b" + Pattern.quote(trigger) + "\\b");
+            }
+        }
+
         String result = text;
-        for (CustomWordEntity entry : words) {
-            if (entry.triggerWord == null || entry.triggerWord.isEmpty()) continue;
-            String trigger = Pattern.quote(entry.triggerWord);
-            Pattern pattern = Pattern.compile("(?i)\\b" + trigger + "\\b");
-            Matcher matcher = pattern.matcher(result);
+        for (int i = 0; i < words.size(); i++) {
+            if (patterns[i] == null) continue;
+            CustomWordEntity entry = words.get(i);
+            Matcher matcher = patterns[i].matcher(result);
             if (matcher.find()) {
                 result = matcher.replaceAll(Matcher.quoteReplacement(entry.replacement != null ? entry.replacement : ""));
             }

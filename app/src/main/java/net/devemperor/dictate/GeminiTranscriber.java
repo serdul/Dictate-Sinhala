@@ -1,13 +1,11 @@
 package net.devemperor.dictate;
 
-import android.util.Base64;
 import android.util.Log;
 
 import com.google.ai.client.generativeai.GenerativeModel;
 import com.google.ai.client.generativeai.java.GenerativeModelFutures;
 import com.google.ai.client.generativeai.type.Content;
 import com.google.ai.client.generativeai.type.GenerateContentResponse;
-import com.google.ai.client.generativeai.type.RequestOptions;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,9 +34,25 @@ public class GeminiTranscriber {
      * @throws RuntimeException   on other errors
      */
     public String transcribe(File audioFile, String language, String punctuationPrompt, String professionContext) {
+        String modelName = "gemini-2.0-flash";
+        return transcribe(audioFile, language, punctuationPrompt, professionContext, modelName);
+    }
+
+    /**
+     * Transcribe an audio file using Gemini's multimodal API.
+     *
+     * @param audioFile         the M4A/AAC file to transcribe
+     * @param language          BCP-47 language code (e.g. "si" for Sinhala), or null/empty for auto-detect
+     * @param punctuationPrompt style hint prompt
+     * @param professionContext profession context prefix (may be empty)
+     * @param modelName         Gemini model to use (e.g. "gemini-2.0-flash")
+     * @return the transcribed text
+     * @throws RateLimitException if Gemini rate-limit is hit
+     * @throws RuntimeException   on other errors
+     */
+    public String transcribe(File audioFile, String language, String punctuationPrompt, String professionContext, String modelName) {
         try {
             byte[] audioBytes = readFileBytes(audioFile);
-            String base64Audio = Base64.encodeToString(audioBytes, Base64.NO_WRAP);
 
             StringBuilder promptBuilder = new StringBuilder();
             if (professionContext != null && !professionContext.isEmpty()) {
@@ -53,7 +67,7 @@ public class GeminiTranscriber {
             }
             promptBuilder.append(". Output only the transcribed text, nothing else.");
 
-            GenerativeModel model = new GenerativeModel("gemini-2.0-flash", apiKey);
+            GenerativeModel model = new GenerativeModel(modelName, apiKey);
             GenerativeModelFutures futures = GenerativeModelFutures.from(model);
 
             Content content = new Content.Builder()

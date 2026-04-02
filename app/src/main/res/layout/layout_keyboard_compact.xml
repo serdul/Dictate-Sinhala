@@ -12,6 +12,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:minWidth="48dp"
+        android:contentDescription="Settings"
         android:foreground="@drawable/ic_baseline_settings_24"
         android:foregroundGravity="center" />
 
@@ -41,6 +42,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:minWidth="48dp"
+        android:contentDescription="Backspace"
         android:foreground="@drawable/ic_baseline_keyboard_backspace_24"
         android:foregroundGravity="center" />
 
@@ -49,6 +51,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:minWidth="48dp"
+        android:contentDescription="Enter"
         android:foreground="@drawable/ic_baseline_subdirectory_arrow_left_24"
         android:foregroundGravity="center" />
 

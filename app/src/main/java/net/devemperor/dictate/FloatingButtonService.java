@@ -30,6 +30,8 @@ import androidx.core.app.NotificationCompat;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import net.devemperor.dictate.GeminiTranscriber;
+import net.devemperor.dictate.R;
 import net.devemperor.dictate.settings.DictateSettingsActivity;
 
 import java.io.File;
@@ -183,23 +185,76 @@ public class FloatingButtonService extends Service {
     }
 
     private void transcribeAndOutput() {
-        String geminiKey = sp.getString("net.devemperor.dictate.transcription_api_key_gemini", "");
-        if (geminiKey.isEmpty()) {
-            mainHandler.post(() -> Toast.makeText(this, "Please configure Gemini API key in settings", Toast.LENGTH_LONG).show());
-            return;
+        int transcriptionProvider = sp.getInt("net.devemperor.dictate.transcription_provider", 0);
+        String[] providerValues = getResources().getStringArray(R.array.dictate_api_providers_values);
+        String apiHost = (transcriptionProvider < providerValues.length) ? providerValues[transcriptionProvider] : "";
+
+        // Read the user's current input language (first selected language)
+        java.util.Set<String> inputLanguages = sp.getStringSet("net.devemperor.dictate.input_languages", null);
+        String language = "si"; // default to Sinhala
+        if (inputLanguages != null && !inputLanguages.isEmpty()) {
+            language = inputLanguages.iterator().next();
         }
-        new Thread(() -> {
-            try {
-                GeminiTranscriber transcriber = new GeminiTranscriber(geminiKey);
-                String text = transcriber.transcribe(audioFile, "si", "", "");
-                outputText(text);
-            } catch (GeminiTranscriber.RateLimitException e) {
-                mainHandler.post(() -> Toast.makeText(this, R.string.wani_floating_button_rate_limit_toast, Toast.LENGTH_SHORT).show());
-            } catch (Exception e) {
-                Log.e(TAG, "Transcription error", e);
-                mainHandler.post(() -> Toast.makeText(this, "Transcription failed", Toast.LENGTH_SHORT).show());
+        final String finalLanguage = language;
+
+        if ("gemini".equals(apiHost)) {
+            String geminiKey = sp.getString("net.devemperor.dictate.transcription_api_key_gemini", sp.getString("net.devemperor.dictate.transcription_api_key", ""));
+            if (geminiKey.isEmpty()) {
+                mainHandler.post(() -> Toast.makeText(this, "Please configure Gemini API key in settings", Toast.LENGTH_LONG).show());
+                return;
             }
-        }).start();
+            String geminiModel = sp.getString("net.devemperor.dictate.transcription_gemini_model", "gemini-2.0-flash");
+            new Thread(() -> {
+                try {
+                    GeminiTranscriber transcriber = new GeminiTranscriber(geminiKey);
+                    String text = transcriber.transcribe(audioFile, finalLanguage, "", "", geminiModel);
+                    outputText(text);
+                } catch (GeminiTranscriber.RateLimitException e) {
+                    mainHandler.post(() -> Toast.makeText(this, R.string.wani_floating_button_rate_limit_toast, Toast.LENGTH_SHORT).show());
+                } catch (Exception e) {
+                    Log.e(TAG, "Transcription error", e);
+                    mainHandler.post(() -> Toast.makeText(this, "Transcription failed", Toast.LENGTH_SHORT).show());
+                }
+            }).start();
+        } else {
+            // OpenAI / Groq / Custom path
+            String apiKey = sp.getString("net.devemperor.dictate.transcription_api_key", sp.getString("net.devemperor.dictate.api_key", ""));
+            if (apiKey.isEmpty()) {
+                mainHandler.post(() -> Toast.makeText(this, "Please configure API key in settings", Toast.LENGTH_LONG).show());
+                return;
+            }
+            String finalApiHost = "custom_server".equals(apiHost)
+                    ? sp.getString("net.devemperor.dictate.transcription_custom_host", "")
+                    : apiHost;
+            String model;
+            switch (transcriptionProvider) {
+                case 1: model = sp.getString("net.devemperor.dictate.transcription_groq_model", "whisper-large-v3-turbo"); break;
+                case 2: model = sp.getString("net.devemperor.dictate.transcription_custom_model", ""); break;
+                default: model = sp.getString("net.devemperor.dictate.transcription_openai_model", "gpt-4o-mini-transcribe");
+            }
+            final String finalModel = model;
+            final String finalKey = apiKey.replaceAll("[^ -~]", "");
+            new Thread(() -> {
+                try {
+                    com.openai.client.okhttp.OpenAIOkHttpClient client = com.openai.client.okhttp.OpenAIOkHttpClient.builder()
+                            .apiKey(finalKey)
+                            .baseUrl(finalApiHost)
+                            .timeout(java.time.Duration.ofSeconds(120))
+                            .build();
+                    com.openai.models.audio.transcriptions.TranscriptionCreateParams.Builder params =
+                            com.openai.models.audio.transcriptions.TranscriptionCreateParams.builder()
+                                    .file(audioFile.toPath())
+                                    .model(finalModel)
+                                    .responseFormat(com.openai.models.audio.AudioResponseFormat.JSON);
+                    if (!finalLanguage.equals("detect")) params.language(finalLanguage);
+                    String text = client.audio().transcriptions().create(params.build()).asTranscription().text().strip();
+                    outputText(text);
+                } catch (Exception e) {
+                    Log.e(TAG, "Transcription error", e);
+                    mainHandler.post(() -> Toast.makeText(this, "Transcription failed", Toast.LENGTH_SHORT).show());
+                }
+            }).start();
+        }
     }
 
     private void outputText(String text) {

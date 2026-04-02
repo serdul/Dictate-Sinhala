@@ -259,6 +259,8 @@ public class DictateInputMethodService extends InputMethodService {
         // Check if compact keyboard mode is enabled
         if (sp.getBoolean("net.devemperor.dictate.compact_keyboard", false)) {
             View compactView = LayoutInflater.from(context).inflate(R.layout.layout_keyboard_compact, null);
+            // Store reference so keyboard lifecycle functions don't NPE on dictateKeyboardView
+            dictateKeyboardView = new ConstraintLayout(context);
             setupCompactKeyboard(compactView);
             return compactView;
         }
@@ -1512,7 +1514,7 @@ public class DictateInputMethodService extends InputMethodService {
                     String geminiModel = sp.getString("net.devemperor.dictate.transcription_gemini_model", "gemini-2.0-flash");
                     GeminiTranscriber transcriber = new GeminiTranscriber(geminiKey);
                     try {
-                        resultText = transcriber.transcribe(audioFile, currentInputLanguageValue, capturedStylePrompt, capturedProfessionContext);
+                        resultText = transcriber.transcribe(audioFile, currentInputLanguageValue, capturedStylePrompt, capturedProfessionContext, geminiModel);
                     } catch (GeminiTranscriber.RateLimitException e) {
                         mainHandler.post(() -> Toast.makeText(DictateInputMethodService.this, R.string.wani_floating_button_rate_limit_toast, Toast.LENGTH_SHORT).show());
                         // Fall back to Groq
