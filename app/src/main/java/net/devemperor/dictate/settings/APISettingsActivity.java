@@ -48,23 +48,28 @@ public class APISettingsActivity extends AppCompatActivity {
     private String transcriptionAPIKeyOpenAI;
     private String transcriptionAPIKeyGroq;
     private String transcriptionAPIKeyCustom;
+    private String transcriptionAPIKeyGemini;
 
     private int rewordingProvider;
     private String rewordingOpenAIModel;
     private String rewordingGroqModel;
     private String rewordingCustomHost;
     private String rewordingCustomModel;
+    private String rewordingGeminiModel;
 
     // New fields for specific API keys
     private String rewordingAPIKeyOpenAI;
     private String rewordingAPIKeyGroq;
     private String rewordingAPIKeyCustom;
+    private String rewordingAPIKeyGemini;
 
     private ArrayAdapter<CharSequence> transcriptionModelOpenAIAdapter;
     private ArrayAdapter<CharSequence> transcriptionModelGroqAdapter;
+    private ArrayAdapter<CharSequence> transcriptionModelGeminiAdapter;
     private ArrayAdapter<CharSequence> transcriptionProviderAdapter;
     private ArrayAdapter<CharSequence> rewordingModelOpenAIAdapter;
     private ArrayAdapter<CharSequence> rewordingModelGroqAdapter;
+    private ArrayAdapter<CharSequence> rewordingModelGeminiAdapter;
     private ArrayAdapter<CharSequence> rewordingProviderAdapter;
 
     private boolean ignoreTextChange = false;
@@ -114,11 +119,14 @@ public class APISettingsActivity extends AppCompatActivity {
         transcriptionAPIKeyOpenAI = sp.getString("net.devemperor.dictate.transcription_api_key_openai", transcriptionProvider == 0 ? oldTranscriptionKey : "");
         transcriptionAPIKeyGroq = sp.getString("net.devemperor.dictate.transcription_api_key_groq", transcriptionProvider == 1 ? oldTranscriptionKey : "");
         transcriptionAPIKeyCustom = sp.getString("net.devemperor.dictate.transcription_api_key_custom", transcriptionProvider == 2 ? oldTranscriptionKey : "");
+        transcriptionAPIKeyGemini = sp.getString("net.devemperor.dictate.transcription_api_key_gemini", transcriptionProvider == 3 ? oldTranscriptionKey : "");
 
         transcriptionModelOpenAIAdapter = ArrayAdapter.createFromResource(this, R.array.dictate_transcription_models_openai, android.R.layout.simple_spinner_item);
         transcriptionModelOpenAIAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         transcriptionModelGroqAdapter = ArrayAdapter.createFromResource(this, R.array.dictate_transcription_models_groq, android.R.layout.simple_spinner_item);
         transcriptionModelGroqAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        transcriptionModelGeminiAdapter = ArrayAdapter.createFromResource(this, R.array.dictate_transcription_models_gemini, android.R.layout.simple_spinner_item);
+        transcriptionModelGeminiAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
         transcriptionProviderAdapter = ArrayAdapter.createFromResource(this, R.array.dictate_api_providers, android.R.layout.simple_spinner_item);
         transcriptionProviderAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -148,6 +156,9 @@ public class APISettingsActivity extends AppCompatActivity {
                 } else if (transcriptionProvider == 1) {
                     transcriptionAPIKeyGroq = newKey;
                     sp.edit().putString("net.devemperor.dictate.transcription_api_key_groq", newKey).apply();
+                } else if (transcriptionProvider == 3) {
+                    transcriptionAPIKeyGemini = newKey;
+                    sp.edit().putString("net.devemperor.dictate.transcription_api_key_gemini", newKey).apply();
                 } else {
                     transcriptionAPIKeyCustom = newKey;
                     sp.edit().putString("net.devemperor.dictate.transcription_api_key_custom", newKey).apply();
@@ -166,6 +177,9 @@ public class APISettingsActivity extends AppCompatActivity {
                     String model = getResources().getStringArray(R.array.dictate_transcription_models_openai_values)[position];
                     sp.edit().putString("net.devemperor.dictate.transcription_openai_model", model).apply();
                     transcriptionOpenAIModel = model;
+                } else if (transcriptionProvider == 3) {
+                    String model = getResources().getStringArray(R.array.dictate_transcription_models_gemini_values)[position];
+                    sp.edit().putString("net.devemperor.dictate.transcription_gemini_model", model).apply();
                 } else {
                     String model = getResources().getStringArray(R.array.dictate_transcription_models_groq_values)[position];
                     sp.edit().putString("net.devemperor.dictate.transcription_groq_model", model).apply();
@@ -205,11 +219,15 @@ public class APISettingsActivity extends AppCompatActivity {
         rewordingAPIKeyOpenAI = sp.getString("net.devemperor.dictate.rewording_api_key_openai", rewordingProvider == 0 ? oldRewordingKey : "");
         rewordingAPIKeyGroq = sp.getString("net.devemperor.dictate.rewording_api_key_groq", rewordingProvider == 1 ? oldRewordingKey : "");
         rewordingAPIKeyCustom = sp.getString("net.devemperor.dictate.rewording_api_key_custom", rewordingProvider == 2 ? oldRewordingKey : "");
+        rewordingAPIKeyGemini = sp.getString("net.devemperor.dictate.rewording_api_key_gemini", rewordingProvider == 3 ? oldRewordingKey : "");
+        rewordingGeminiModel = sp.getString("net.devemperor.dictate.rewording_gemini_model", "gemini-2.0-flash");
 
         rewordingModelOpenAIAdapter = ArrayAdapter.createFromResource(this, R.array.dictate_rewording_models_openai, android.R.layout.simple_spinner_item);
         rewordingModelOpenAIAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         rewordingModelGroqAdapter = ArrayAdapter.createFromResource(this, R.array.dictate_rewording_models_groq, android.R.layout.simple_spinner_item);
         rewordingModelGroqAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        rewordingModelGeminiAdapter = ArrayAdapter.createFromResource(this, R.array.dictate_rewording_models_gemini, android.R.layout.simple_spinner_item);
+        rewordingModelGeminiAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
         rewordingProviderAdapter = ArrayAdapter.createFromResource(this, R.array.dictate_api_providers, android.R.layout.simple_spinner_item);
         rewordingProviderAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -239,6 +257,9 @@ public class APISettingsActivity extends AppCompatActivity {
                 } else if (rewordingProvider == 1) {
                     rewordingAPIKeyGroq = newKey;
                     sp.edit().putString("net.devemperor.dictate.rewording_api_key_groq", newKey).apply();
+                } else if (rewordingProvider == 3) {
+                    rewordingAPIKeyGemini = newKey;
+                    sp.edit().putString("net.devemperor.dictate.rewording_api_key_gemini", newKey).apply();
                 } else {
                     rewordingAPIKeyCustom = newKey;
                     sp.edit().putString("net.devemperor.dictate.rewording_api_key_custom", newKey).apply();
@@ -257,6 +278,10 @@ public class APISettingsActivity extends AppCompatActivity {
                     String model = getResources().getStringArray(R.array.dictate_rewording_models_openai_values)[position];
                     sp.edit().putString("net.devemperor.dictate.rewording_openai_model", model).apply();
                     rewordingOpenAIModel = model;
+                } else if (rewordingProvider == 3) {
+                    String model = getResources().getStringArray(R.array.dictate_rewording_models_gemini_values)[position];
+                    sp.edit().putString("net.devemperor.dictate.rewording_gemini_model", model).apply();
+                    rewordingGeminiModel = model;
                 } else {
                     String model = getResources().getStringArray(R.array.dictate_rewording_models_groq_values)[position];
                     sp.edit().putString("net.devemperor.dictate.rewording_groq_model", model).apply();
@@ -291,6 +316,7 @@ public class APISettingsActivity extends AppCompatActivity {
 
         if (position == 0) {
             transcriptionAPIKeyEt.setText(transcriptionAPIKeyOpenAI);
+            transcriptionAPIKeyEt.setHint(R.string.dictate_api_key_hint);
             transcriptionModelSpn.setAdapter(transcriptionModelOpenAIAdapter);
 
             int pos = IntStream.range(0, transcriptionModelOpenAIAdapter.getCount())
@@ -300,6 +326,7 @@ public class APISettingsActivity extends AppCompatActivity {
             transcriptionModelSpn.setSelection(pos);
         } else if (position == 1) {
             transcriptionAPIKeyEt.setText(transcriptionAPIKeyGroq);
+            transcriptionAPIKeyEt.setHint(R.string.dictate_api_key_hint);
             transcriptionModelSpn.setAdapter(transcriptionModelGroqAdapter);
 
             int pos = IntStream.range(0, transcriptionModelGroqAdapter.getCount())
@@ -307,8 +334,16 @@ public class APISettingsActivity extends AppCompatActivity {
                     .findFirst()
                     .orElse(0);
             transcriptionModelSpn.setSelection(pos);
+        } else if (position == 3) {
+            transcriptionAPIKeyEt.setText(transcriptionAPIKeyGemini);
+            transcriptionAPIKeyEt.setHint(R.string.wani_gemini_api_key_hint);
+            transcriptionModelSpn.setAdapter(transcriptionModelGeminiAdapter);
+            transcriptionModelSpn.setEnabled(true);
+            // Show Gemini free tier note
+            android.widget.Toast.makeText(this, R.string.wani_gemini_free_tier_note, android.widget.Toast.LENGTH_SHORT).show();
         } else {
             transcriptionAPIKeyEt.setText(transcriptionAPIKeyCustom);
+            transcriptionAPIKeyEt.setHint(R.string.dictate_api_key_hint);
         }
 
         // Ensure generic key is updated to match current provider's key
@@ -323,6 +358,7 @@ public class APISettingsActivity extends AppCompatActivity {
 
         if (position == 0) {
             rewordingAPIKeyEt.setText(rewordingAPIKeyOpenAI);
+            rewordingAPIKeyEt.setHint(R.string.dictate_api_key_hint);
             rewordingModelSpn.setAdapter(rewordingModelOpenAIAdapter);
 
             int pos = IntStream.range(0, rewordingModelOpenAIAdapter.getCount())
@@ -332,6 +368,7 @@ public class APISettingsActivity extends AppCompatActivity {
             rewordingModelSpn.setSelection(pos);
         } else if (position == 1) {
             rewordingAPIKeyEt.setText(rewordingAPIKeyGroq);
+            rewordingAPIKeyEt.setHint(R.string.dictate_api_key_hint);
             rewordingModelSpn.setAdapter(rewordingModelGroqAdapter);
 
             int pos = IntStream.range(0, rewordingModelGroqAdapter.getCount())
@@ -339,8 +376,19 @@ public class APISettingsActivity extends AppCompatActivity {
                     .findFirst()
                     .orElse(0);
             rewordingModelSpn.setSelection(pos);
+        } else if (position == 3) {
+            rewordingAPIKeyEt.setText(rewordingAPIKeyGemini);
+            rewordingAPIKeyEt.setHint(R.string.wani_gemini_api_key_hint);
+            rewordingModelSpn.setAdapter(rewordingModelGeminiAdapter);
+            rewordingModelSpn.setEnabled(true);
+            int pos = IntStream.range(0, rewordingModelGeminiAdapter.getCount())
+                    .filter(i -> getResources().getStringArray(R.array.dictate_rewording_models_gemini_values)[i].equals(rewordingGeminiModel))
+                    .findFirst()
+                    .orElse(0);
+            rewordingModelSpn.setSelection(pos);
         } else {
             rewordingAPIKeyEt.setText(rewordingAPIKeyCustom);
+            rewordingAPIKeyEt.setHint(R.string.dictate_api_key_hint);
         }
 
         // Ensure generic key is updated to match current provider's key

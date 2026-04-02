@@ -87,6 +87,7 @@ public class DictateUtils {
         prompts.put("ur", "اس جملے میں بڑے حروف اور اوقاف موجود ہیں۔");
         prompts.put("vi", "Câu này có chữ hoa và dấu câu.");
         prompts.put("cy", "Mae gan y frawddeg hon lythrennau mawr ac atalnodi.");
+        prompts.put("si", "මෙම වාක්‍යයේ නිවැරදි විරාම ලකුණු සහ සිංහල ලිපි ශෛලිය භාවිතා කරන්න.");
         PROMPT_PUNCTUATION_CAPITALIZATION_BY_LANGUAGE = Collections.unmodifiableMap(prompts);
     }
 
@@ -197,6 +198,11 @@ public class DictateUtils {
                 return inputTokens * 0.00000015 + outputTokens * 0.00000075;
             case "openai/gpt-oss-20b":
                 return inputTokens * 0.00000010 + outputTokens * 0.00000050;
+
+            // Gemini models (free tier)
+            case "gemini-2.0-flash":
+            case "gemini-1.5-pro":
+                return 0.0;
 
             default:
                 return 0;
@@ -458,6 +464,8 @@ public class DictateUtils {
                 return "\uD83C\uDDFB\uD83C\uDDF3";
             case "cy":
                 return "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC77\uDB40\uDC6C\uDB40\uDC73\uDB40\uDC7F";
+            case "si":
+                return "\uD83C\uDDF1\uD83C\uDDF0"; // 🇱🇰 Sri Lanka
             default:
                 return "";
         }

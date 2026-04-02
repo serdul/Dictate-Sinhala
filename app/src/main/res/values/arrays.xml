@@ -59,6 +59,7 @@
         <item>@string/dictate_lang_urdu</item>
         <item>@string/dictate_lang_vietnamese</item>
         <item>@string/dictate_lang_welsh</item>
+        <item>@string/dictate_lang_sinhala</item>
     </string-array>
     <string-array name="dictate_app_languages">
         <item>@string/dictate_language_system</item>
@@ -133,6 +134,7 @@
         <item>ur</item>
         <item>vi</item>
         <item>cy</item>
+        <item>si</item>
     </string-array>
     <string-array name="dictate_record_different_languages">
         <!-- 1. Detect automatically (Spezialfall: hier unverändert "Detect") -->
@@ -251,6 +253,8 @@
         <item>Ghi âm</item>
         <!-- 58. Welsh -->
         <item>Recordio</item>
+        <!-- 59. Sinhala -->
+        <item>ගත කරන්න</item>
     </string-array>
 
     <string-array name="dictate_default_input_languages">
@@ -262,11 +266,13 @@
         <item>OpenAI</item>
         <item>Groq</item>
         <item>@string/dictate_custom_provider</item>
+        <item>Google Gemini</item>
     </string-array>
     <string-array name="dictate_api_providers_values">
         <item>https://api.openai.com/v1/</item>
         <item>https://api.groq.com/openai/v1/</item>
         <item>custom_server</item>
+        <item>gemini</item>
     </string-array>
 
     <string-array name="dictate_transcription_models_openai">
@@ -332,5 +338,51 @@
         <item>system</item>
         <item>light</item>
         <item>dark</item>
+    </string-array>
+
+    <!-- Gemini model arrays -->
+    <string-array name="dictate_transcription_models_gemini">
+        <item>Gemini 2.0 Flash (Free)</item>
+        <item>Gemini 1.5 Pro</item>
+    </string-array>
+    <string-array name="dictate_transcription_models_gemini_values">
+        <item>gemini-2.0-flash</item>
+        <item>gemini-1.5-pro</item>
+    </string-array>
+    <string-array name="dictate_rewording_models_gemini">
+        <item>Gemini 2.0 Flash (Free)</item>
+        <item>Gemini 1.5 Pro</item>
+    </string-array>
+    <string-array name="dictate_rewording_models_gemini_values">
+        <item>gemini-2.0-flash</item>
+        <item>gemini-1.5-pro</item>
+    </string-array>
+
+    <!-- Output Mode arrays -->
+    <string-array name="wani_output_mode_entries">
+        <item>@string/wani_output_mode_sinhala_script</item>
+        <item>@string/wani_output_mode_romanized</item>
+        <item>@string/wani_output_mode_translate_english</item>
+    </string-array>
+    <string-array name="wani_output_mode_values">
+        <item>sinhala_script</item>
+        <item>romanized</item>
+        <item>translate_english</item>
+    </string-array>
+
+    <!-- Profession Mode arrays -->
+    <string-array name="wani_profession_mode_entries">
+        <item>@string/wani_profession_mode_general</item>
+        <item>@string/wani_profession_mode_medical</item>
+        <item>@string/wani_profession_mode_legal</item>
+        <item>@string/wani_profession_mode_it</item>
+        <item>@string/wani_profession_mode_custom</item>
+    </string-array>
+    <string-array name="wani_profession_mode_values">
+        <item>general</item>
+        <item>medical</item>
+        <item>legal</item>
+        <item>it</item>
+        <item>custom</item>
     </string-array>
 </resources>

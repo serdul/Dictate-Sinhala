@@ -62,7 +62,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.StaggeredGridLayoutManager;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.models.audio.AudioResponseFormat;
 import com.openai.models.audio.transcriptions.Transcription;
@@ -72,7 +71,10 @@ import com.openai.models.chat.completions.ChatCompletionCreateParams;
 
 import net.devemperor.dictate.BuildConfig;
 import net.devemperor.dictate.DictateUtils;
+import net.devemperor.dictate.GeminiTranscriber;
+import net.devemperor.dictate.OutputMode;
 import net.devemperor.dictate.R;
+import net.devemperor.dictate.dictionary.DictionaryRepository;
 import net.devemperor.dictate.rewording.PromptEditActivity;
 import net.devemperor.dictate.rewording.PromptModel;
 import net.devemperor.dictate.rewording.PromptsDatabaseHelper;
@@ -224,6 +226,7 @@ public class DictateInputMethodService extends InputMethodService {
     private boolean disableNonSelectionPrompts = false;
 
     UsageDatabaseHelper usageDb;
+    DictionaryRepository dictionaryRepository;
 
     private interface PromptResultCallback {
         void onSuccess(String text);
@@ -246,10 +249,19 @@ public class DictateInputMethodService extends InputMethodService {
         sp = getSharedPreferences("net.devemperor.dictate", MODE_PRIVATE);
         promptsDb = new PromptsDatabaseHelper(this);
         usageDb = new UsageDatabaseHelper(this);
+        dictionaryRepository = new DictionaryRepository(this);
         vibrationEnabled = sp.getBoolean("net.devemperor.dictate.vibration", true);
         currentInputLanguagePos = sp.getInt("net.devemperor.dictate.input_language_pos", 0);
 
         dictateKeyboardView = (ConstraintLayout) LayoutInflater.from(context).inflate(R.layout.activity_dictate_keyboard_view, null);
+
+        // Check if compact keyboard mode is enabled
+        if (sp.getBoolean("net.devemperor.dictate.compact_keyboard", false)) {
+            View compactView = LayoutInflater.from(context).inflate(R.layout.layout_keyboard_compact, null);
+            setupCompactKeyboard(compactView);
+            return compactView;
+        }
+
         dictateKeyboardView.setKeepScreenOn(false);
         keepScreenAwakeApplied = false;
         ViewCompat.setOnApplyWindowInsetsListener(dictateKeyboardView, (v, insets) -> {
@@ -1479,6 +1491,11 @@ public class DictateInputMethodService extends InputMethodService {
                 stylePrompt = "";
         }
 
+        // Profession mode context prompt
+        String professionContext = getProfessionContextPrompt();
+
+        final String capturedStylePrompt = stylePrompt;
+        final String capturedProfessionContext = professionContext;
         speechApiThread = Executors.newSingleThreadExecutor();
         speechApiThread.execute(() -> {
             try {
@@ -1486,56 +1503,104 @@ public class DictateInputMethodService extends InputMethodService {
                 String apiHost = getResources().getStringArray(R.array.dictate_api_providers_values)[transcriptionProvider];
                 if (apiHost.equals("custom_server")) apiHost = sp.getString("net.devemperor.dictate.transcription_custom_host", getString(R.string.dictate_custom_server_host_hint));
 
-                String apiKey = sp.getString("net.devemperor.dictate.transcription_api_key", sp.getString("net.devemperor.dictate.api_key", "NO_API_KEY")).replaceAll("[^ -~]", "");
-                String proxyHost = sp.getString("net.devemperor.dictate.proxy_host", getString(R.string.dictate_settings_proxy_hint));
+                String resultText;
 
-                String transcriptionModel = "";
-                switch (transcriptionProvider) {  // for upgrading: use old transcription_model preference
-                    case 0: transcriptionModel = sp.getString("net.devemperor.dictate.transcription_openai_model", sp.getString("net.devemperor.dictate.transcription_model", "gpt-4o-mini-transcribe")); break;
-                    case 1: transcriptionModel = sp.getString("net.devemperor.dictate.transcription_groq_model", "whisper-large-v3-turbo"); break;
-                    case 2: transcriptionModel = sp.getString("net.devemperor.dictate.transcription_custom_model", getString(R.string.dictate_custom_transcription_model_hint));
-                }
-
-                OpenAIOkHttpClient.Builder clientBuilder = OpenAIOkHttpClient.builder()
-                        .apiKey(apiKey)
-                        .baseUrl(apiHost)
-                        .timeout(Duration.ofSeconds(120));
-
-                TranscriptionCreateParams.Builder transcriptionBuilder = TranscriptionCreateParams.builder()
-                        .file(audioFile.toPath())
-                        .model(transcriptionModel)
-                        .responseFormat(AudioResponseFormat.JSON);  // gpt-4o-transcribe only supports json
-
-                if (!currentInputLanguageValue.equals("detect")) transcriptionBuilder.language(currentInputLanguageValue);
-                if (!stylePrompt.isEmpty()) transcriptionBuilder.prompt(stylePrompt);
-                if (sp.getBoolean("net.devemperor.dictate.proxy_enabled", false)) {
-                    if (DictateUtils.isValidProxy(proxyHost)) DictateUtils.applyProxy(clientBuilder, sp);
-                }
-                Log.d("DictateKeyboardSerice", "Style-Prompt: " + stylePrompt);
-
-                Transcription transcription;
-                int retryCount = 0;
-                while (true) {
+                if (apiHost.equals("gemini")) {
+                    // Gemini transcription path
+                    String geminiKey = sp.getString("net.devemperor.dictate.transcription_api_key_gemini", sp.getString("net.devemperor.dictate.transcription_api_key", "")).replaceAll("[^ -~]", "");
+                    String geminiModel = sp.getString("net.devemperor.dictate.transcription_gemini_model", "gemini-2.0-flash");
+                    GeminiTranscriber transcriber = new GeminiTranscriber(geminiKey);
                     try {
-                        transcription = clientBuilder.build().audio().transcriptions().create(transcriptionBuilder.build()).asTranscription();
-                        break;
-                    } catch (RuntimeException e) {
-                        String msg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
-                        boolean isRetryable = !msg.contains("api key") && !msg.contains("quota") && !msg.contains("audio duration")
-                                && !msg.contains("content size limit") && !msg.contains("format");
-
-                        if (isRetryable && retryCount < 3) {
-                            retryCount++;
-                            try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
+                        resultText = transcriber.transcribe(audioFile, currentInputLanguageValue, capturedStylePrompt, capturedProfessionContext);
+                    } catch (GeminiTranscriber.RateLimitException e) {
+                        mainHandler.post(() -> Toast.makeText(DictateInputMethodService.this, R.string.wani_floating_button_rate_limit_toast, Toast.LENGTH_SHORT).show());
+                        // Fall back to Groq
+                        String groqKey = sp.getString("net.devemperor.dictate.transcription_api_key_groq", "").replaceAll("[^ -~]", "");
+                        if (!groqKey.isEmpty()) {
+                            OpenAIOkHttpClient.Builder fallbackBuilder = OpenAIOkHttpClient.builder()
+                                    .apiKey(groqKey)
+                                    .baseUrl("https://api.groq.com/openai/v1/")
+                                    .timeout(Duration.ofSeconds(120));
+                            TranscriptionCreateParams.Builder fallbackParams = TranscriptionCreateParams.builder()
+                                    .file(audioFile.toPath())
+                                    .model("whisper-large-v3-turbo")
+                                    .responseFormat(AudioResponseFormat.JSON);
+                            if (!currentInputLanguageValue.equals("detect")) fallbackParams.language(currentInputLanguageValue);
+                            if (!capturedStylePrompt.isEmpty()) fallbackParams.prompt(capturedStylePrompt);
+                            resultText = fallbackBuilder.build().audio().transcriptions().create(fallbackParams.build()).asTranscription().text().strip();
                         } else {
-                            throw e;
+                            throw new RuntimeException("Gemini rate limit reached and no Groq key configured");
                         }
                     }
+                    usageDb.edit(geminiModel, DictateUtils.getAudioDuration(audioFile), 0, 0, transcriptionProvider);
+                } else {
+                    // OpenAI / Groq / Custom path
+                    String apiKey = sp.getString("net.devemperor.dictate.transcription_api_key", sp.getString("net.devemperor.dictate.api_key", "NO_API_KEY")).replaceAll("[^ -~]", "");
+                    String proxyHost = sp.getString("net.devemperor.dictate.proxy_host", getString(R.string.dictate_settings_proxy_hint));
+
+                    String transcriptionModel = "";
+                    switch (transcriptionProvider) {
+                        case 0: transcriptionModel = sp.getString("net.devemperor.dictate.transcription_openai_model", sp.getString("net.devemperor.dictate.transcription_model", "gpt-4o-mini-transcribe")); break;
+                        case 1: transcriptionModel = sp.getString("net.devemperor.dictate.transcription_groq_model", "whisper-large-v3-turbo"); break;
+                        case 2: transcriptionModel = sp.getString("net.devemperor.dictate.transcription_custom_model", getString(R.string.dictate_custom_transcription_model_hint));
+                    }
+
+                    // Prepend profession context to style prompt if present
+                    String fullPrompt = capturedStylePrompt;
+                    if (!capturedProfessionContext.isEmpty() && !fullPrompt.isEmpty()) {
+                        fullPrompt = capturedProfessionContext + " " + fullPrompt;
+                    } else if (!capturedProfessionContext.isEmpty()) {
+                        fullPrompt = capturedProfessionContext;
+                    }
+
+                    OpenAIOkHttpClient.Builder clientBuilder = OpenAIOkHttpClient.builder()
+                            .apiKey(apiKey)
+                            .baseUrl(apiHost)
+                            .timeout(Duration.ofSeconds(120));
+
+                    TranscriptionCreateParams.Builder transcriptionBuilder = TranscriptionCreateParams.builder()
+                            .file(audioFile.toPath())
+                            .model(transcriptionModel)
+                            .responseFormat(AudioResponseFormat.JSON);
+
+                    if (!currentInputLanguageValue.equals("detect")) transcriptionBuilder.language(currentInputLanguageValue);
+                    if (!fullPrompt.isEmpty()) transcriptionBuilder.prompt(fullPrompt);
+                    if (sp.getBoolean("net.devemperor.dictate.proxy_enabled", false)) {
+                        if (DictateUtils.isValidProxy(proxyHost)) DictateUtils.applyProxy(clientBuilder, sp);
+                    }
+                    Log.d("DictateKeyboardSerice", "Style-Prompt: " + fullPrompt);
+
+                    Transcription transcription;
+                    int retryCount = 0;
+                    while (true) {
+                        try {
+                            transcription = clientBuilder.build().audio().transcriptions().create(transcriptionBuilder.build()).asTranscription();
+                            break;
+                        } catch (RuntimeException e) {
+                            String msg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+                            boolean isRetryable = !msg.contains("api key") && !msg.contains("quota") && !msg.contains("audio duration")
+                                    && !msg.contains("content size limit") && !msg.contains("format");
+
+                            if (isRetryable && retryCount < 3) {
+                                retryCount++;
+                                try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
+                            } else {
+                                throw e;
+                            }
+                        }
+                    }
+                    resultText = transcription.text().strip();
+                    usageDb.edit(transcriptionModel, DictateUtils.getAudioDuration(audioFile), 0, 0, transcriptionProvider);
                 }
-                String resultText = transcription.text().strip();  // Groq sometimes adds leading whitespace
+
                 resultText = applyAutoFormattingIfEnabled(resultText);
 
-                usageDb.edit(transcriptionModel, DictateUtils.getAudioDuration(audioFile), 0, 0, transcriptionProvider);
+                // Output mode post-processing
+                resultText = applyOutputMode(resultText);
+
+                // Custom dictionary replacement
+                String professionTag = sp.getString("net.devemperor.dictate.profession_mode", "general");
+                resultText = dictionaryRepository.applyDictionary(resultText, professionTag);
 
                 boolean processedByQueuedPrompts = false;
                 List<Integer> promptsToApply;
@@ -1553,7 +1618,6 @@ public class DictateInputMethodService extends InputMethodService {
                 if (!processedByQueuedPrompts && !livePrompt) {
                     commitTextToInputConnection(resultText);
                 } else if (livePrompt) {
-                    // continue with ChatGPT API request
                     livePrompt = false;
                     startGPTApiRequest(new PromptModel(-1, Integer.MIN_VALUE, "", resultText, true, false));
                 }
@@ -1579,7 +1643,7 @@ public class DictateInputMethodService extends InputMethodService {
                             showInfo("invalid_api_key");
                         } else if (message.contains("quota")) {
                             showInfo("quota_exceeded");
-                        } else if (message.contains("audio duration") || message.contains("content size limit")) {  // gpt-o-transcribe and whisper have different limits
+                        } else if (message.contains("audio duration") || message.contains("content size limit")) {
                             showInfo("content_size_limit");
                         } else if (message.contains("format")) {
                             showInfo("format_not_supported");
@@ -1601,7 +1665,7 @@ public class DictateInputMethodService extends InputMethodService {
             mainHandler.post(() -> {
                 recordButton.setText(getDictateButtonText());
                 applyRecordingIconState(false);
-                recordButton.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_baseline_mic_20, 0, R.drawable.ic_baseline_folder_open_20, 0); // back to original icons
+                recordButton.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_baseline_mic_20, 0, R.drawable.ic_baseline_folder_open_20, 0);
                 recordButton.setEnabled(true);
             });
         });
@@ -1710,6 +1774,21 @@ public class DictateInputMethodService extends InputMethodService {
         }
 
         String apiHost = providerValues[rewordingProvider];
+
+        // Gemini path
+        if ("gemini".equals(apiHost)) {
+            String geminiKey = sp.getString("net.devemperor.dictate.rewording_api_key_gemini", sp.getString("net.devemperor.dictate.rewording_api_key", "")).replaceAll("[^ -~]", "");
+            String geminiModel = sp.getString("net.devemperor.dictate.rewording_gemini_model", "gemini-2.0-flash");
+            if (TextUtils.isEmpty(geminiKey)) throw new IllegalStateException("Gemini API key missing");
+            GeminiTranscriber transcriber = new GeminiTranscriber(geminiKey);
+            try {
+                return transcriber.reword(prompt, geminiModel);
+            } catch (GeminiTranscriber.RateLimitException e) {
+                mainHandler.post(() -> Toast.makeText(DictateInputMethodService.this, R.string.wani_floating_button_rate_limit_toast, Toast.LENGTH_SHORT).show());
+                throw e;
+            }
+        }
+
         if ("custom_server".equals(apiHost)) {
             apiHost = sp.getString("net.devemperor.dictate.rewording_custom_host", getString(R.string.dictate_custom_server_host_hint));
         }
@@ -1966,29 +2045,100 @@ public class DictateInputMethodService extends InputMethodService {
     }
 
     private void sendLogToCrashlytics(Exception e) {
-        // get all values from SharedPreferences and add them as custom keys to crashlytics
-        FirebaseCrashlytics crashlytics = FirebaseCrashlytics.getInstance();
-        for (String key : sp.getAll().keySet()) {
-            if (key.contains("api_key") || key.contains("proxy_host")) continue;
-            Object value = sp.getAll().get(key);
-            if (value instanceof Boolean) {
-                crashlytics.setCustomKey(key, (Boolean) value);
-            } else if (value instanceof Float) {
-                crashlytics.setCustomKey(key, (Float) value);
-            } else if (value instanceof Integer) {
-                crashlytics.setCustomKey(key, (Integer) value);
-            } else if (value instanceof Long) {
-                crashlytics.setCustomKey(key, (Long) value);
-            } else if (value instanceof String) {
-                crashlytics.setCustomKey(key, (String) value);
-            }
-        }
-        crashlytics.setUserId(sp.getString("net.devemperor.dictate.user_id", "null"));
-        crashlytics.recordException(e);
         StringWriter sw = new StringWriter();
         e.printStackTrace(new PrintWriter(sw));
         Log.e("DictateInputMethodService", sw.toString());
-        Log.e("DictateInputMethodService", "Recorded crashlytics report");
+    }
+
+    private void setupCompactKeyboard(View view) {
+        com.google.android.material.button.MaterialButton settingsBtn = view.findViewById(R.id.compact_settings_btn);
+        com.google.android.material.button.MaterialButton recordBtn = view.findViewById(R.id.compact_record_btn);
+        com.google.android.material.button.MaterialButton backspaceBtn = view.findViewById(R.id.compact_backspace_btn);
+        com.google.android.material.button.MaterialButton enterBtn = view.findViewById(R.id.compact_enter_btn);
+        TextView modeChip = view.findViewById(R.id.compact_mode_chip_tv);
+
+        // Update mode chip text
+        if (modeChip != null && sp != null) {
+            String lang = currentInputLanguageValue != null ? currentInputLanguageValue : "si";
+            String emoji = DictateUtils.translateLanguageToEmoji(lang);
+            String mode = sp.getString("net.devemperor.dictate.output_mode", "sinhala_script");
+            String modeLabel;
+            if (mode == null || mode.equals("sinhala_script")) modeLabel = "Script";
+            else if (mode.equals("romanized")) modeLabel = "Roman";
+            else modeLabel = "EN";
+            modeChip.setText(emoji + " " + modeLabel);
+        }
+
+        if (settingsBtn != null) {
+            settingsBtn.setOnClickListener(v -> {
+                Intent intent = new Intent(this, net.devemperor.dictate.settings.DictateSettingsActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            });
+        }
+
+        if (recordBtn != null) {
+            recordBtn.setOnClickListener(v -> {
+                if (!isRecording) {
+                    startRecording();
+                } else {
+                    stopRecording();
+                }
+            });
+        }
+
+        if (backspaceBtn != null) {
+            backspaceBtn.setOnClickListener(v -> {
+                InputConnection ic = getCurrentInputConnection();
+                if (ic != null) ic.deleteSurroundingText(1, 0);
+            });
+        }
+
+        if (enterBtn != null) {
+            enterBtn.setOnClickListener(v -> {
+                InputConnection ic = getCurrentInputConnection();
+                if (ic != null) ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
+            });
+        }
+    }
+
+    private String getProfessionContextPrompt() {        if (sp == null) return "";
+        String mode = sp.getString("net.devemperor.dictate.profession_mode", "general");
+        if (mode == null || mode.equals("general")) return "";
+        switch (mode) {
+            case "medical": return getString(R.string.wani_profession_prompt_medical);
+            case "legal":   return getString(R.string.wani_profession_prompt_legal);
+            case "it":      return getString(R.string.wani_profession_prompt_it);
+            case "custom":  return sp.getString("net.devemperor.dictate.custom_profession_prompt", "");
+            default:        return "";
+        }
+    }
+
+    private String applyOutputMode(String text) {
+        if (text == null || text.isEmpty()) return text;
+        if (sp == null) return text;
+        String mode = sp.getString("net.devemperor.dictate.output_mode", "sinhala_script");
+        if (mode == null || mode.equals("sinhala_script")) return text;
+
+        OutputMode outputMode;
+        switch (mode) {
+            case "romanized":        outputMode = OutputMode.ROMANIZED; break;
+            case "translate_english": outputMode = OutputMode.TRANSLATE_ENGLISH; break;
+            default:                 return text;
+        }
+
+        try {
+            String prompt;
+            if (outputMode == OutputMode.ROMANIZED) {
+                prompt = "Transliterate this Sinhala text to Roman letters using consistent Singlish romanization. Output only the transliteration: " + text;
+            } else {
+                prompt = "Translate this Sinhala text to English. Output only the translation: " + text;
+            }
+            return requestRewordingFromApi(prompt);
+        } catch (Exception e) {
+            Log.e("DictateInputMethodService", "Output mode post-processing failed", e);
+            return text; // fall back to original
+        }
     }
 
     private void showInfo(String type) {

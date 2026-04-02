@@ -186,6 +186,53 @@ public class PreferencesFragment extends PreferenceFragmentCompat {
             });
         }
 
+        Preference dictionaryPreference = findPreference("net.devemperor.dictate.dictionary");
+        if (dictionaryPreference != null) {
+            dictionaryPreference.setOnPreferenceClickListener(preference -> {
+                Intent intent = new Intent(requireContext(), net.devemperor.dictate.dictionary.DictionaryActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                return true;
+            });
+        }
+
+        ListPreference professionModePreference = findPreference("net.devemperor.dictate.profession_mode");
+        EditTextPreference customProfessionPromptPreference = findPreference("net.devemperor.dictate.custom_profession_prompt");
+        if (professionModePreference != null && customProfessionPromptPreference != null) {
+            customProfessionPromptPreference.setVisible("custom".equals(professionModePreference.getValue()));
+            professionModePreference.setOnPreferenceChangeListener((preference, newValue) -> {
+                customProfessionPromptPreference.setVisible("custom".equals(newValue));
+                return true;
+            });
+        }
+
+        SwitchPreference floatingButtonPreference = findPreference("net.devemperor.dictate.enable_floating_button");
+        if (floatingButtonPreference != null) {
+            floatingButtonPreference.setOnPreferenceChangeListener((preference, newValue) -> {
+                boolean enable = (Boolean) newValue;
+                if (enable) {
+                    if (!android.provider.Settings.canDrawOverlays(requireContext())) {
+                        new MaterialAlertDialogBuilder(requireContext())
+                                .setTitle(R.string.wani_floating_button_title)
+                                .setMessage(R.string.wani_floating_button_permission_needed)
+                                .setPositiveButton(R.string.dictate_yes, (d, w) -> {
+                                    Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                            Uri.parse("package:" + requireContext().getPackageName()));
+                                    startActivity(intent);
+                                })
+                                .setNegativeButton(R.string.dictate_no, null)
+                                .show();
+                        return false;
+                    } else {
+                        requireContext().startForegroundService(new Intent(requireContext(), net.devemperor.dictate.FloatingButtonService.class));
+                    }
+                } else {
+                    requireContext().stopService(new Intent(requireContext(), net.devemperor.dictate.FloatingButtonService.class));
+                }
+                return true;
+            });
+        }
+
         Preference cachePreference = findPreference("net.devemperor.dictate.cache");
         File[] cacheFiles = requireContext().getCacheDir().listFiles();
         if (cachePreference != null) {
@@ -216,12 +263,9 @@ public class PreferencesFragment extends PreferenceFragmentCompat {
         Preference feedbackPreference = findPreference("net.devemperor.dictate.feedback");
         if (feedbackPreference != null) {
             feedbackPreference.setOnPreferenceClickListener(preference -> {
-                Intent emailIntent = new Intent(Intent.ACTION_SENDTO);
-                emailIntent.setData(Uri.parse("mailto:contact@devemperor.net"));
-                emailIntent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.dictate_feedback_subject));
-                emailIntent.putExtra(Intent.EXTRA_TEXT, getString(R.string.dictate_feedback_body)
-                        + "\n\nDictate User-ID: " + sp.getString("net.devemperor.dictate.user_id", "null"));
-                startActivity(Intent.createChooser(emailIntent, getString(R.string.dictate_feedback_title)));
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/94712104933"));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
                 return true;
             });
         }
@@ -229,8 +273,9 @@ public class PreferencesFragment extends PreferenceFragmentCompat {
         Preference githubPreference = findPreference("net.devemperor.dictate.github");
         if (githubPreference != null) {
             githubPreference.setOnPreferenceClickListener(preference -> {
-                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/DevEmperor/Dictate"));
-                startActivity(browserIntent);
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/94712104933"));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
                 return true;
             });
         }
@@ -239,7 +284,16 @@ public class PreferencesFragment extends PreferenceFragmentCompat {
         if (aboutPreference != null) {
             aboutPreference.setTitle(getString(R.string.dictate_about, BuildConfig.VERSION_NAME));
             aboutPreference.setOnPreferenceClickListener(preference -> {
-                Toast.makeText(requireContext(), "User-ID: " + sp.getString("net.devemperor.dictate.user_id", "null"), Toast.LENGTH_LONG).show();
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                        .setTitle(getString(R.string.dictate_about, BuildConfig.VERSION_NAME))
+                        .setMessage("Made with ❤️ from Sri Lanka\nSeran Senevirathna\n+94712104933\n\nSoli deo gloria ✝️")
+                        .setPositiveButton(R.string.dictate_okay, null)
+                        .setNeutralButton("WhatsApp", (d, w) -> {
+                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/94712104933"));
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(intent);
+                        })
+                        .show();
                 return true;
             });
         }

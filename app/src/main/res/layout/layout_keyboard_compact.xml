@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/dictate_keyboard_view_compact"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp"
+    android:background="@color/dictate_keyboard_background_light">
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/compact_settings_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="48dp"
+        android:foreground="@drawable/ic_baseline_settings_24"
+        android:foregroundGravity="center" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/compact_record_btn"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:text="@string/dictate_record"
+        android:textSize="14sp"
+        android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/compact_mode_chip_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:layout_marginEnd="4dp"
+        android:padding="4dp"
+        android:textSize="12sp"
+        android:maxLines="1" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/compact_backspace_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="48dp"
+        android:foreground="@drawable/ic_baseline_keyboard_backspace_24"
+        android:foregroundGravity="center" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/compact_enter_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="48dp"
+        android:foreground="@drawable/ic_baseline_subdirectory_arrow_left_24"
+        android:foregroundGravity="center" />
+
+</LinearLayout>
