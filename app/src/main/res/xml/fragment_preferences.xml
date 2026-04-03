@@ -109,6 +109,53 @@
             android:defaultValue="true"
             app:iconSpaceReserved="false"/>
 
+        <androidx.preference.ListPreference
+            android:key="net.devemperor.dictate.output_mode"
+            android:title="@string/wani_output_mode_title"
+            android:summary="@string/wani_output_mode_summary"
+            android:defaultValue="sinhala_script"
+            app:entries="@array/wani_output_mode_entries"
+            app:entryValues="@array/wani_output_mode_values"
+            app:iconSpaceReserved="false"/>
+
+        <androidx.preference.ListPreference
+            android:key="net.devemperor.dictate.profession_mode"
+            android:title="@string/wani_profession_mode_title"
+            android:summary="@string/wani_profession_mode_summary"
+            android:defaultValue="general"
+            app:entries="@array/wani_profession_mode_entries"
+            app:entryValues="@array/wani_profession_mode_values"
+            app:iconSpaceReserved="false"/>
+
+        <androidx.preference.EditTextPreference
+            android:key="net.devemperor.dictate.custom_profession_prompt"
+            android:title="@string/wani_profession_custom_prompt_title"
+            android:hint="@string/wani_profession_custom_prompt_hint"
+            app:positiveButtonText="@string/dictate_okay"
+            app:negativeButtonText="@string/dictate_cancel"
+            app:dependency="net.devemperor.dictate.profession_mode"
+            app:iconSpaceReserved="false"/>
+
+        <androidx.preference.SwitchPreference
+            android:key="net.devemperor.dictate.enable_floating_button"
+            android:title="@string/wani_floating_button_title"
+            android:summary="@string/wani_floating_button_summary"
+            android:defaultValue="false"
+            app:iconSpaceReserved="false"/>
+
+        <androidx.preference.SwitchPreference
+            android:key="net.devemperor.dictate.compact_keyboard"
+            android:title="@string/wani_compact_keyboard_title"
+            android:summary="@string/wani_compact_keyboard_summary"
+            android:defaultValue="false"
+            app:iconSpaceReserved="false"/>
+
+        <androidx.preference.Preference
+            android:key="net.devemperor.dictate.dictionary"
+            android:title="@string/wani_dictionary_title"
+            android:summary="@string/wani_dictionary_summary"
+            app:iconSpaceReserved="false"/>
+
         <androidx.preference.Preference
             android:key="net.devemperor.dictate.usage"
             android:title="@string/dictate_settings_usage"
