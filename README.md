@@ -18,9 +18,9 @@ Transcribe speech in Sinhala script, Singlish romanization, or directly to Engli
 
 ## ⬇️ Download APK
 
-**[→ Releases page](../../releases)** — Download the latest `wani-vX.X.X.apk` from the Releases tab above.
+**[→ Releases page](../../releases)** — Download the latest signed `wani-vX.X.X.apk` from the Releases tab above.
 
-> The APK is also available as a **build artifact** from every CI run:
+> The APK is also available as a **CI build artifact** from every run (fallback distribution):
 > go to the [Actions tab](../../actions), click the latest successful run, and download **`wani-debug-apk`**.
 
 ### Installation steps
