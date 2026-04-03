@@ -55,7 +55,7 @@ dependencies {
 
     // Gemini AI SDK
     implementation libs.generativeai
-    implementation "com.google.guava:guava:33.2.1-android"
+    implementation libs.guava
 
     // Room database
     implementation libs.room.runtime
