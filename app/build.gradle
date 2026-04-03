@@ -1,9 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-
-    // Add the Google services Gradle plugin
-    id 'com.google.gms.google-services'
-    id 'com.google.firebase.crashlytics'
 }
 
 android {
@@ -14,8 +10,8 @@ android {
         applicationId "net.devemperor.dictate"
         minSdk 26
         targetSdk 35
-        versionCode 30
-        versionName "3.2.0"
+        versionCode 31
+        versionName "1.0.0-wani"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -57,7 +53,11 @@ dependencies {
     implementation libs.commons.validator
     implementation libs.colorpicker
 
-    // Import the Firebase BoM
-    implementation platform(libs.firebase.bom)
-    implementation libs.firebase.crashlytics
+    // Gemini AI SDK
+    implementation libs.generativeai
+    implementation "com.google.guava:guava:33.2.1-android"
+
+    // Room database
+    implementation libs.room.runtime
+    annotationProcessor libs.room.compiler
 }
