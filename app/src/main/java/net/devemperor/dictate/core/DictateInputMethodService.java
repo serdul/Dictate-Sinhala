@@ -1499,11 +1499,30 @@ public class DictateInputMethodService extends InputMethodService {
 
         final String capturedStylePrompt = stylePrompt;
         final String capturedProfessionContext = professionContext;
+
+        // Validate audio file exists before starting transcription
+        if (audioFile == null || !audioFile.exists() || !audioFile.canRead()) {
+            mainHandler.post(() -> {
+                showInfo("audio_file_error");
+                resendButton.setVisibility(View.VISIBLE);
+                recordButton.setText(getDictateButtonText());
+            });
+            return;
+        }
+
+        // Ensure previous executor thread is shut down before starting a new one
+        if (speechApiThread != null && !speechApiThread.isShutdown()) {
+            speechApiThread.shutdownNow();
+        }
         speechApiThread = Executors.newSingleThreadExecutor();
         speechApiThread.execute(() -> {
             try {
                 int transcriptionProvider = sp.getInt("net.devemperor.dictate.transcription_provider", 0);
-                String apiHost = getResources().getStringArray(R.array.dictate_api_providers_values)[transcriptionProvider];
+                String[] providers = getResources().getStringArray(R.array.dictate_api_providers_values);
+                if (transcriptionProvider < 0 || transcriptionProvider >= providers.length) {
+                    transcriptionProvider = 0;
+                }
+                String apiHost = providers[transcriptionProvider];
                 if (apiHost.equals("custom_server")) apiHost = sp.getString("net.devemperor.dictate.transcription_custom_host", getString(R.string.dictate_custom_server_host_hint));
 
                 String resultText;
@@ -1641,7 +1660,7 @@ public class DictateInputMethodService extends InputMethodService {
                     if (vibrationEnabled) vibrator.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
                     mainHandler.post(() -> {
                         resendButton.setVisibility(View.VISIBLE);
-                        String message = Objects.requireNonNull(e.getMessage()).toLowerCase();
+                        String message = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
                         if (message.contains("api key")) {
                             showInfo("invalid_api_key");
                         } else if (message.contains("quota")) {
@@ -1654,7 +1673,7 @@ public class DictateInputMethodService extends InputMethodService {
                             showInfo("internet_error");
                         }
                     });
-                } else if (e.getCause().getMessage() != null && (e.getCause().getMessage().contains("timeout") || e.getCause().getMessage().contains("failed to connect"))) {
+                } else if (e.getCause() != null && e.getCause().getMessage() != null && (e.getCause().getMessage().contains("timeout") || e.getCause().getMessage().contains("failed to connect"))) {
                     sendLogToCrashlytics(e);
                     if (vibrationEnabled) vibrator.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
                     mainHandler.post(() -> {

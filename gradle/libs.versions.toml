@@ -1,5 +1,5 @@
 [versions]
-agp = "8.13.2"
+agp = "7.3.1"
 colorpicker = "0.0.15"
 commonsValidator = "1.10.1"
 converterJackson = "3.0.0"

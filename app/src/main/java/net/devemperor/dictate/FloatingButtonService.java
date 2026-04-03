@@ -1,5 +1,6 @@
 package net.devemperor.dictate;
 
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -9,6 +10,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.PixelFormat;
 import android.media.MediaRecorder;
 import android.os.Build;
@@ -17,6 +19,8 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
+
+import androidx.core.content.ContextCompat;
 import android.view.ContextThemeWrapper;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -151,6 +155,13 @@ public class FloatingButtonService extends Service {
     }
 
     private void startFloatingRecording() {
+        // Check RECORD_AUDIO permission at runtime
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            mainHandler.post(() -> Toast.makeText(this, "Microphone permission required", Toast.LENGTH_SHORT).show());
+            return;
+        }
+
         try {
             audioFile = new File(getCacheDir(), "floating_audio.m4a");
             recorder = new MediaRecorder();
@@ -185,9 +196,15 @@ public class FloatingButtonService extends Service {
     }
 
     private void transcribeAndOutput() {
+        // Validate audio file exists
+        if (audioFile == null || !audioFile.exists() || !audioFile.canRead()) {
+            mainHandler.post(() -> Toast.makeText(this, "Audio file error", Toast.LENGTH_SHORT).show());
+            return;
+        }
+
         int transcriptionProvider = sp.getInt("net.devemperor.dictate.transcription_provider", 0);
         String[] providerValues = getResources().getStringArray(R.array.dictate_api_providers_values);
-        String apiHost = (transcriptionProvider < providerValues.length) ? providerValues[transcriptionProvider] : "";
+        String apiHost = (transcriptionProvider < providerValues.length && transcriptionProvider >= 0) ? providerValues[transcriptionProvider] : "";
 
         // Read the user's current input language (first selected language)
         java.util.Set<String> inputLanguages = sp.getStringSet("net.devemperor.dictate.input_languages", null);
