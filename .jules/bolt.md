@@ -1,0 +1,3 @@
+## 2024-05-24 - Regex Compilation Cache Optimization
+**Learning:** Frequent `Pattern.compile()` execution on every text transcription was causing unnecessary CPU and memory allocation overhead. Since Java's `Pattern` is thread-safe and immutable, it is safe and highly beneficial to cache them.
+**Action:** Introduced a `ConcurrentHashMap` in `DictionaryRepository` to cache dynamically compiled patterns for custom dictionary words, and extracted the static proxy pattern in `DictateUtils` into a constant. Always cache compiled regex patterns when they are repeatedly used.

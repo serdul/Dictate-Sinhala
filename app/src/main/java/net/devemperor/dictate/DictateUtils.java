@@ -24,6 +24,8 @@ import java.util.regex.Pattern;
 
 public class DictateUtils {
 
+    private static final Pattern PROXY_PATTERN = Pattern.compile("^(?:(socks5|http)://)?(?:(\\w+):(\\w+)@)?([\\w.-]+):(\\d+)$");
+
     public static final String PROMPT_PUNCTUATION_CAPITALIZATION = "This sentence has capitalization and punctuation.";
     public static final String PROMPT_REWORDING_BE_PRECISE = "Be accurate with your output. Only output exactly what the user has asked for above. Do not add any text before or after the actual output. Output the text in the language of the instruction, unless a different language was explicitly requested.";
     private static final Map<String, String> PROMPT_PUNCTUATION_CAPITALIZATION_BY_LANGUAGE;
@@ -287,10 +289,7 @@ public class DictateUtils {
     public static boolean isValidProxy(String proxy) {
         if (proxy == null || proxy.isEmpty()) return false;
 
-        // Regex for general format match (http/socks5, optional user:pass, host, port)
-        String regex = "^(?:(socks5|http)://)?(?:(\\w+):(\\w+)@)?([\\w.-]+):(\\d+)$";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(proxy);
+        Matcher matcher = PROXY_PATTERN.matcher(proxy);
 
         if (!matcher.matches()) return false;
 
@@ -319,8 +318,7 @@ public class DictateUtils {
 
         if (!proxyEnabled || proxyInput.isEmpty()) return;
 
-        Pattern pattern = Pattern.compile("^(?:(socks5|http)://)?(?:(\\w+):(\\w+)@)?([\\w.-]+):(\\d+)$");
-        Matcher matcher = pattern.matcher(proxyInput);
+        Matcher matcher = PROXY_PATTERN.matcher(proxyInput);
 
         if (matcher.matches()) {
             String type = matcher.group(1); // "socks5" or "http" or null

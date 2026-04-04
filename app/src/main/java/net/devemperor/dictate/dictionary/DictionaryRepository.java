@@ -3,12 +3,14 @@ package net.devemperor.dictate.dictionary;
 import android.content.Context;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class DictionaryRepository {
 
     private final CustomWordDao dao;
+    private static final ConcurrentHashMap<String, Pattern> patternCache = new ConcurrentHashMap<>();
 
     public DictionaryRepository(Context context) {
         this.dao = WaniDatabase.getInstance(context).customWordDao();
@@ -37,7 +39,7 @@ public class DictionaryRepository {
     /**
      * Apply dictionary replacements to the given text.
      * Matches are case-insensitive and whole-word.
-     * Patterns are compiled once per call for performance.
+     * Patterns are cached for performance.
      *
      * @param text          text to process
      * @param professionTag current profession tag, or null for general
@@ -55,20 +57,14 @@ public class DictionaryRepository {
 
         if (words == null || words.isEmpty()) return text;
 
-        // Pre-compile all patterns before processing
-        Pattern[] patterns = new Pattern[words.size()];
-        for (int i = 0; i < words.size(); i++) {
-            String trigger = words.get(i).triggerWord;
-            if (trigger != null && !trigger.isEmpty()) {
-                patterns[i] = Pattern.compile("(?i)\\b" + Pattern.quote(trigger) + "\\b");
-            }
-        }
-
         String result = text;
         for (int i = 0; i < words.size(); i++) {
-            if (patterns[i] == null) continue;
             CustomWordEntity entry = words.get(i);
-            Matcher matcher = patterns[i].matcher(result);
+            String trigger = entry.triggerWord;
+            if (trigger == null || trigger.isEmpty()) continue;
+
+            Pattern pattern = patternCache.computeIfAbsent(trigger, t -> Pattern.compile("(?i)\\b" + Pattern.quote(t) + "\\b"));
+            Matcher matcher = pattern.matcher(result);
             if (matcher.find()) {
                 result = matcher.replaceAll(Matcher.quoteReplacement(entry.replacement != null ? entry.replacement : ""));
             }
