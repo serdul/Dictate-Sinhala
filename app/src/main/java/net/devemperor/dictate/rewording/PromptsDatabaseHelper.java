@@ -140,19 +140,19 @@ public class PromptsDatabaseHelper extends SQLiteOpenHelper {
         cv.put("PROMPT", model.getPrompt());
         cv.put("REQUIRES_SELECTION", model.requiresSelection());
         cv.put("AUTO_APPLY", model.isAutoApply());
-        db.update("PROMPTS", cv, "ID = " + model.getId(), null);
+        db.update("PROMPTS", cv, "ID = ?", new String[]{String.valueOf(model.getId())});
         db.close();
     }
 
     public void delete(int id) {
         SQLiteDatabase db = getWritableDatabase();
-        db.delete("PROMPTS", "ID = " + id, null);
+        db.delete("PROMPTS", "ID = ?", new String[]{String.valueOf(id)});
         db.close();
     }
 
     public PromptModel get(int id) {
         SQLiteDatabase db = getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM PROMPTS WHERE ID = " + id, null);
+        Cursor cursor = db.rawQuery("SELECT * FROM PROMPTS WHERE ID = ?", new String[]{String.valueOf(id)});
         PromptModel model = null;
         if (cursor.moveToFirst()) {
             model = new PromptModel(cursor.getInt(0), cursor.getInt(1), cursor.getString(2), cursor.getString(3), cursor.getInt(4) == 1, cursor.getInt(5) == 1);
