@@ -339,4 +339,13 @@
     <!-- Compact keyboard mode -->
     <string name="wani_compact_keyboard_title">Compact Keyboard Mode 📱</string>
     <string name="wani_compact_keyboard_summary">Use a minimal single-row keyboard layout</string>
+
+    <!-- Content Descriptions for Accessibility -->
+    <string name="cd_settings">Settings</string>
+    <string name="cd_resend">Resend previous recording</string>
+    <string name="cd_backspace">Backspace</string>
+    <string name="cd_switch">Hide keyboard</string>
+    <string name="cd_trash">Delete text</string>
+    <string name="cd_pause">Pause recording</string>
+    <string name="cd_enter">Enter</string>
 </resources>

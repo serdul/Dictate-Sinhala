@@ -1,0 +1,3 @@
+## 2025-02-14 - Improve accessibility of keyboard view icon buttons
+**Learning:** Found several icon-only `MaterialButton`s in the custom keyboard layout (`activity_dictate_keyboard_view.xml`) missing `contentDescription` attributes. Android screen readers (TalkBack) need these to announce what the buttons do, similar to ARIA labels in web context.
+**Action:** Always verify custom keyboard or control panel layouts for missing `contentDescription` on non-text buttons. When fixing, remember to define strings in `strings.xml` for localization instead of hardcoding.
